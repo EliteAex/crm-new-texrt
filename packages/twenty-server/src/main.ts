@@ -7,7 +7,6 @@ import { inspect } from 'util';
 import bytes from 'bytes';
 import { useContainer } from 'class-validator';
 import session from 'express-session';
-import graphqlUploadExpress from 'graphql-upload/graphqlUploadExpress.mjs';
 import { ApiPath } from 'twenty-shared/types';
 
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
@@ -27,8 +26,18 @@ import './instrument';
 import { settings } from './engine/constants/settings';
 import { enableValidationMetadataCache } from './utils/enable-validation-metadata-cache.util';
 import { generateFrontConfig } from './utils/generate-front-config';
+import { graphqlUploadScalarReady } from './utils/graphql-upload-scalar.util';
 
 const bootstrap = async () => {
+  // graphql-upload ships ESM-only (.mjs); a static import compiles to require() under
+  // CommonJS output and crashes at runtime with ERR_REQUIRE_ESM (seen on Vercel).
+  // graphqlUploadScalarReady must resolve before NestFactory.create builds the GraphQL
+  // schema, since resolvers reference the GraphQLUpload binding via `type: () => ...`.
+  const [{ default: graphqlUploadExpress }] = await Promise.all([
+    import('graphql-upload/graphqlUploadExpress.mjs'),
+    graphqlUploadScalarReady,
+  ]);
+
   enableValidationMetadataCache();
   setPgDateTypeParser();
 
