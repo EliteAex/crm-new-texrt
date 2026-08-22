@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: twenty-server
+    runtime: docker
+    dockerfilePath: ./packages/twenty-docker/twenty/Dockerfile
+    dockerContext: .
+    # Multi-stage Dockerfile; the plain build target is `twenty-app-dev` (last
+    # stage, meant for local dev). Production needs the `twenty` target
+    # (server + frontend, no bundled Postgres/Redis). If Render's dashboard
+    # doesn't expose a "Docker Build Target" field for this service, add
+    # `--target twenty` via the dashboard's advanced build settings.
+    dockerCommand: node dist/main
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_PORT
+        value: 10000
+      - key: DISABLE_CRON_JOBS_REGISTRATION
+        value: "true"
+      - key: PG_DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: APP_SECRET
+        sync: false
+      - key: SIGN_IN_PREFILLED
+        sync: false
+      - key: IS_WORKSPACE_CREATION_LIMITED_TO_SERVER_ADMINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
